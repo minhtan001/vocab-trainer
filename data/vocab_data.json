@@ -8,7 +8,7 @@
           "id": "w_8ke4rp0",
           "word": "apple",
           "meaning": "táo",
-          "correctStreak": 1,
+          "correctStreak": 0,
           "learned": false,
           "enabled": true
         },
@@ -56,7 +56,7 @@
           "id": "w_4lbve21",
           "word": "class",
           "meaning": "hạng",
-          "correctStreak": 0,
+          "correctStreak": 1,
           "learned": false,
           "enabled": true
         }
