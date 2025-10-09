@@ -10,7 +10,7 @@
           "meaning": "táo",
           "correctStreak": 1,
           "learned": false,
-          "enabled": true
+          "enabled": false
         },
         {
           "id": "w_ld7ui4y",
@@ -26,7 +26,7 @@
           "meaning": "cam",
           "correctStreak": 1,
           "learned": false,
-          "enabled": true
+          "enabled": false
         },
         {
           "id": "w_9xtysbr",
@@ -34,7 +34,7 @@
           "meaning": "sách",
           "correctStreak": 1,
           "learned": false,
-          "enabled": true
+          "enabled": false
         },
         {
           "id": "w_6yw9y9z",
@@ -42,7 +42,7 @@
           "meaning": "bàn",
           "correctStreak": 1,
           "learned": false,
-          "enabled": true
+          "enabled": false
         },
         {
           "id": "w_zrpg2xj",
@@ -50,7 +50,7 @@
           "meaning": "trang chủ",
           "correctStreak": 1,
           "learned": false,
-          "enabled": true
+          "enabled": false
         },
         {
           "id": "w_4lbve21",
@@ -58,7 +58,7 @@
           "meaning": "hạng",
           "correctStreak": 2,
           "learned": false,
-          "enabled": true
+          "enabled": false
         }
       ]
     },
