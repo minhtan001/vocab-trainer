@@ -51,6 +51,14 @@
           "correctStreak": 0,
           "learned": false,
           "enabled": true
+        },
+        {
+          "id": "w_zrjpysw",
+          "word": "phone",
+          "meaning": "số điện thoại",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
         }
       ]
     }
