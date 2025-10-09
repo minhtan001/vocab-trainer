@@ -61,6 +61,20 @@
           "enabled": true
         }
       ]
+    },
+    {
+      "id": "list_wra33nr",
+      "name": "things",
+      "words": [
+        {
+          "id": "w_wdl20w7",
+          "word": "door",
+          "meaning": "cửa ",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        }
+      ]
     }
   ]
 }
