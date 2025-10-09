@@ -51,6 +51,14 @@
           "correctStreak": 0,
           "learned": false,
           "enabled": true
+        },
+        {
+          "id": "w_4lbve21",
+          "word": "class",
+          "meaning": "hạng",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
         }
       ]
     }
