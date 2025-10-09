@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Vocab Trainer v5 — GitHub Sync</title>
+  <title>Vocab Trainer v5.1 — GitHub Sync</title>
   <style>
     :root{--bg:#f4f6fb;--card:#ffffff;--muted:#6b7280;--accent:#2563eb}
     *{box-sizing:border-box}
@@ -252,20 +252,43 @@
       return await res.json();
     }
 
-    async function ghPutFile(username, repo, branch, path, token, contentStr, message){
-      const get = await ghGetFile(username, repo, branch, path, token);
-      const sha = get ? get.sha : undefined;
-      const url = `https://api.github.com/repos/${username}/${repo}/contents/${path}`;
-      const body = { message: message || 'Update vocab data', content: btoa(unescape(encodeURIComponent(contentStr))), branch };
-      if(sha) body.sha = sha;
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: 'token ' + token },
-        body: JSON.stringify(body)
-      });
-      if(!res.ok){ const txt = await res.text(); throw new Error('GitHub PUT error: ' + res.status + ' ' + txt); }
-      return await res.json();
-    }
+    // --- Fixed ghPutFile: handles 409 Conflict gracefully ---
+async function ghPutFile(username, repo, branch, path, token, contentStr, message){
+  // always refresh SHA before writing
+  let get = await ghGetFile(username, repo, branch, path, token);
+  const url = `https://api.github.com/repos/${username}/${repo}/contents/${path}`;
+  const body = {
+    message: message || 'Update vocab data',
+    content: btoa(unescape(encodeURIComponent(contentStr))),
+    branch
+  };
+  if (get && get.sha) body.sha = get.sha;
+
+  let res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: 'token ' + token },
+    body: JSON.stringify(body)
+  });
+
+  // 🌀 retry once if conflict (409)
+  if (res.status === 409) {
+    console.warn('409 Conflict — refreshing SHA and retrying...');
+    get = await ghGetFile(username, repo, branch, path, token);
+    body.sha = get ? get.sha : undefined;
+    res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: 'token ' + token },
+      body: JSON.stringify(body)
+    });
+  }
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error('GitHub PUT error: ' + res.status + ' ' + txt);
+  }
+  return await res.json();
+}
+
 
     // Connect UI
     const githubModal = document.getElementById('githubModal');
@@ -330,9 +353,13 @@
     }
 
     function editWord(wordId){ const list = data.lists.find(x=>x.id===currentListId); const w = list.words.find(x=>x.id===wordId); if(!w) return; editingWordId = w.id; document.getElementById('wordInput').value = w.word; document.getElementById('meaningInput').value = w.meaning; document.getElementById('updateWordBtn').disabled = false; document.getElementById('addWordBtn').disabled = true; }
-    function deleteWord(wordId){ if(!confirm('Delete this word?')) return; const list = data.lists.find(x=>x.id===currentListId); list.words = list.words.filter(x=>x.id!==wordId); saveDataLocal(); try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Delete a word'); }catch(e){} renderCurrentList(); }
+    function deleteWord(wordId){ if(!confirm('Delete this word?')) return; const list = data.lists.find(x=>x.id===currentListId); list.words = list.words.filter(x=>x.id!==wordId); saveDataLocal(); 
+    //try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Delete a word'); }catch(e){} 
+    renderCurrentList(); }
 
-    function resetWordProgress(wordId){ const list = data.lists.find(x=>x.id===currentListId); const w = list.words.find(x=>x.id===wordId); if(!w) return; w.correctStreak = 0; w.learned = false; saveDataLocal(); renderCurrentList(); const lang = localStorage.getItem(LANG_KEY) || 'en'; showToast((lang==='vi'?UI_TEXT.vi.resetSingle:UI_TEXT.en.resetSingle) + ` "${w.word}"`); try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Reset single word progress'); }catch(e){} }
+    function resetWordProgress(wordId){ const list = data.lists.find(x=>x.id===currentListId); const w = list.words.find(x=>x.id===wordId); if(!w) return; w.correctStreak = 0; w.learned = false; saveDataLocal(); renderCurrentList(); const lang = localStorage.getItem(LANG_KEY) || 'en'; showToast((lang==='vi'?UI_TEXT.vi.resetSingle:UI_TEXT.en.resetSingle) + ` "${w.word}"`);
+    //try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Reset single word progress'); }catch(e){} 
+  }
 
     document.getElementById('createListBtn').onclick = ()=>{ const name = document.getElementById('newListName').value.trim(); if(!name) return alert('Enter a list name'); const id = uid('list'); data.lists.push({id,name,words:[]}); document.getElementById('newListName').value=''; saveDataLocal(); currentListId = id; renderAll(); }
 
@@ -353,14 +380,17 @@
       if(!mv){ document.getElementById('meaningInput').placeholder = 'Translating...'; mv = await autoTranslateToVI(wv); document.getElementById('meaningInput').placeholder = 'Meaning (Vietnamese) — leave empty to auto-translate'; }
       list.words.push({ id:uid('w'), word:wv, meaning:mv, correctStreak:0, learned:false, enabled:true });
       saveDataLocal(); renderCurrentList(); document.getElementById('wordInput').value=''; document.getElementById('meaningInput').value=''; showToast('Word added');
-      try{ const cfg = getGitHubConfig(); if(cfg) await pushToGitHub('Add word'); showToast('Synced to GitHub'); }catch(e){}
+      //try{ const cfg = getGitHubConfig(); if(cfg) await pushToGitHub('Add word'); showToast('Synced to GitHub'); }catch(e){}
     }
 
     document.getElementById('updateWordBtn').onclick = async ()=>{
-      if(!editingWordId) return; const list = data.lists.find(x=>x.id===currentListId); const w = list.words.find(x=>x.id===editingWordId); w.word = document.getElementById('wordInput').value.trim(); w.meaning = document.getElementById('meaningInput').value.trim(); editingWordId = null; document.getElementById('updateWordBtn').disabled=true; document.getElementById('addWordBtn').disabled=false; saveDataLocal(); renderCurrentList(); document.getElementById('wordInput').value=''; document.getElementById('meaningInput').value=''; showToast('Word updated'); try{ const cfg = getGitHubConfig(); if(cfg) await pushToGitHub('Update word'); showToast('Synced to GitHub'); }catch(e){}
+      if(!editingWordId) return; const list = data.lists.find(x=>x.id===currentListId); const w = list.words.find(x=>x.id===editingWordId); w.word = document.getElementById('wordInput').value.trim(); w.meaning = document.getElementById('meaningInput').value.trim(); editingWordId = null; document.getElementById('updateWordBtn').disabled=true; document.getElementById('addWordBtn').disabled=false; saveDataLocal(); renderCurrentList(); document.getElementById('wordInput').value=''; document.getElementById('meaningInput').value=''; showToast('Word updated'); 
+      //try{ const cfg = getGitHubConfig(); if(cfg) await pushToGitHub('Update word'); showToast('Synced to GitHub'); }catch(e){}
     }
 
-    document.getElementById('resetAllProgressBtn').onclick = ()=>{ if(!confirm('Reset progress for this list?')) return; const list = data.lists.find(x=>x.id===currentListId); list.words.forEach(w=>{ w.correctStreak = 0; w.learned=false; }); saveDataLocal(); renderCurrentList(); showToast('All progress reset'); try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Reset all progress'); }catch(e){} }
+    document.getElementById('resetAllProgressBtn').onclick = ()=>{ if(!confirm('Reset progress for this list?')) return; const list = data.lists.find(x=>x.id===currentListId); list.words.forEach(w=>{ w.correctStreak = 0; w.learned=false; }); saveDataLocal(); renderCurrentList(); showToast('All progress reset'); 
+    //try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Reset all progress'); }catch(e){} 
+  }
 
     document.getElementById('exportBtn').onclick = ()=>{ const list = data.lists.find(x=>x.id===currentListId); if(!list) return alert('Select a list'); const txt = JSON.stringify(list, null, 2); const a = document.createElement('a'); const blob = new Blob([txt], {type:'application/json'}); a.href = URL.createObjectURL(blob); a.download = (list.name||'list') + '.json'; a.click(); showToast('Exported'); }
 
@@ -371,7 +401,9 @@
     function startLearning(){ const list = data.lists.find(x=>x.id===currentListId); if(!list) return alert('Select a list'); const mode = document.getElementById('modeSelect').value; const excludeDisabled = document.getElementById('excludeDisabled').checked; const randomize = document.getElementById('randomize').checked; let pool = list.words.slice(); if(excludeDisabled) pool = pool.filter(w=>w.enabled); if(mode === 'listening' || mode === 'writing') pool = pool.filter(w=>!w.learned); if(mode === 'review') pool = pool.filter(w=>w.learned); if(pool.length === 0) return alert('No words match selection.'); if(randomize) shuffle(pool); session = { pool: pool.slice(), index:0, correct:0, wrong:0, newlyLearned:[], mode }; session.showMeaning = (mode==='writing' || mode==='review'); document.getElementById('learningArea').style.display='block'; document.getElementById('manageArea').style.display='none'; document.getElementById('studyAnswer').value=''; updateSessionUI(); speakCurrent(); document.getElementById('studyAnswer').focus(); }
     document.getElementById('startLearningBtn').onclick = ()=> startLearning();
     document.getElementById('stopSessionBtn').onclick = ()=>{ if(confirm('Stop session?')) endSession(); }
-    function endSession(){ if(!session) return; try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Sync after session'); }catch(e){} alert(`Session ended. Correct: ${session.correct}, Wrong: ${session.wrong}, Newly learned: ${session.newlyLearned.length}`); session=null; document.getElementById('learningArea').style.display='none'; document.getElementById('manageArea').style.display='block'; renderCurrentList(); }
+    function endSession(){ if(!session) return; 
+      //try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Sync after session'); }catch(e){} 
+      alert(`Session ended. Correct: ${session.correct}, Wrong: ${session.wrong}, Newly learned: ${session.newlyLearned.length}`); session=null; document.getElementById('learningArea').style.display='none'; document.getElementById('manageArea').style.display='block'; renderCurrentList(); }
     function updateSessionUI(){ if(!session) return; document.getElementById('sessionProgress').textContent = `${session.index+1} / ${session.pool.length}`; const cw = session.pool[session.index]; document.getElementById('studyWord').textContent = session.mode === 'writing' ? (cw.meaning || '—') : (session.showMeaning ? (cw.meaning || '—') : '🔊 Listen and type'); document.getElementById('studyMeaning').textContent = session.showMeaning ? cw.meaning || '' : ''; document.getElementById('sessionResult').textContent = `Correct: ${session.correct} • Wrong: ${session.wrong}`; }
     function speakCurrent(){ if(!session) return; const cw = session.pool[session.index]; speak(cw.word); }
     document.getElementById('playWordBtn').onclick = () => { if(session) speakCurrent(); }
@@ -379,7 +411,9 @@
     document.getElementById('markCorrectBtn').onclick = ()=>{ markResult(true); }
     document.getElementById('markWrongBtn').onclick = ()=>{ markResult(false); }
     function checkAnswer(){ if(!session) return; const input = document.getElementById('studyAnswer').value.trim(); const cw = session.pool[session.index]; const correct = cw.word.trim().toLowerCase(); if(input.toLowerCase() === correct){ markResult(true); } else { markResult(false); } }
-    function markResult(isCorrect){ const cw = session.pool[session.index]; const list = data.lists.find(x=>x.id===currentListId); const actual = list.words.find(w=>w.id===cw.id); const streakNeeded = parseInt(document.getElementById('streakNeeded').value) || 3; if(isCorrect){ session.correct++; actual.correctStreak = (actual.correctStreak||0) + 1; if(actual.correctStreak >= streakNeeded && !actual.learned){ actual.learned = true; session.newlyLearned.push(actual); } sessionResultFlash('Correct', true); } else { session.wrong++; actual.correctStreak = 0; sessionResultFlash(`Wrong — answer: ${actual.word}`, false); } saveDataLocal(); try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Update progress'); }catch(e){} if(session.index < session.pool.length - 1){ session.index++; document.getElementById('studyAnswer').value=''; updateSessionUI(); setTimeout(()=>{ speakCurrent(); document.getElementById('studyAnswer').focus(); },800); } else { endSession(); } }
+    function markResult(isCorrect){ const cw = session.pool[session.index]; const list = data.lists.find(x=>x.id===currentListId); const actual = list.words.find(w=>w.id===cw.id); const streakNeeded = parseInt(document.getElementById('streakNeeded').value) || 3; if(isCorrect){ session.correct++; actual.correctStreak = (actual.correctStreak||0) + 1; if(actual.correctStreak >= streakNeeded && !actual.learned){ actual.learned = true; session.newlyLearned.push(actual); } sessionResultFlash('Correct', true); } else { session.wrong++; actual.correctStreak = 0; sessionResultFlash(`Wrong — answer: ${actual.word}`, false); } saveDataLocal(); 
+    //try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Update progress'); }catch(e){} 
+    if(session.index < session.pool.length - 1){ session.index++; document.getElementById('studyAnswer').value=''; updateSessionUI(); setTimeout(()=>{ speakCurrent(); document.getElementById('studyAnswer').focus(); },800); } else { endSession(); } }
     function sessionResultFlash(text, ok){ const el = document.getElementById('sessionResult'); el.textContent = text; el.style.color = ok? 'green':'red'; setTimeout(()=>{ if(session) updateSessionUI(); el.style.color=''; },800); }
 
     // speech
