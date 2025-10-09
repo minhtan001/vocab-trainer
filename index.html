@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Vocab Trainer v4.1</title>
+  <title>Vocab Trainer v5 — GitHub Sync</title>
   <style>
     :root{--bg:#f4f6fb;--card:#ffffff;--muted:#6b7280;--accent:#2563eb}
     *{box-sizing:border-box}
@@ -38,13 +38,18 @@
     .toast.show{opacity:1;transform:translateY(0)}
     .action-btn{padding:6px 8px;border-radius:6px;border:none;cursor:pointer}
     .action-small{font-size:13px}
+    .modal{position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35)}
+    .modal.hidden { display: none !important; }
+    .modal-card{background:white;padding:18px;border-radius:10px;width:520px;max-width:95%}
+    .muted-note{font-size:13px;color:#6b7280}
+    code{background:#f1f5f9;padding:2px 4px;border-radius:4px;font-size:13px}
   </style>
 </head>
 <body>
   <div class="app">
     <aside class="sidebar">
       <div style="display:flex;align-items:center;justify-content:space-between">
-        <div class="brand">Vocab Trainer v4.1</div>
+        <div class="brand">Vocab Trainer v5</div>
         <div class="lang-select">
           <select id="uiLang">
             <option value="en">EN</option>
@@ -64,7 +69,13 @@
         </div>
       </div>
 
-      <div class="footer" id="footerTip">Tip: data is saved in your browser (localStorage). You can export/import JSON to transfer.</div>
+      <div style="margin-top:14px">
+        <button class="btn" id="connectGithubBtn">🔗 Connect GitHub</button>
+        <button class="btn alt" id="syncNowBtn">💾 Sync Now</button>
+        <div id="githubStatus" class="small muted-note" style="margin-top:8px">Not connected</div>
+      </div>
+
+      <div class="footer" id="footerTip">Tip: With GitHub Sync enabled, data file lives in your repo at <code>data/vocab_data.json</code>.</div>
     </aside>
 
     <main>
@@ -179,163 +190,151 @@
 
   <div id="toast" class="toast"></div>
 
-  <script>
-    // Data model and persistence
-    const STORAGE_KEY = 'vocabTrainer_v4_1_data_v1';
-    const LANG_KEY = 'vocabTrainer_v4_1_uiLang';
+  <!-- GitHub Connect Modal -->
+  <div id="githubModal" class="modal hidden">
+    <div class="modal-card">
+      <h3>Connect to GitHub</h3>
+      <div class="small muted-note">We'll read/write <code>data/vocab_data.json</code> in your repo. Provide a personal access token with <code>contents: write</code> permission.</div>
+      <div style="height:10px"></div>
+      <label>GitHub username</label>
+      <input id="ghUser" placeholder="username">
+      <label>Repository name</label>
+      <input id="ghRepo" placeholder="vocab-trainer">
+      <label>Branch</label>
+      <input id="ghBranch" placeholder="main" value="main">
+      <label>Personal Access Token (PAT)</label>
+      <input id="ghToken" placeholder="ghp_..." type="password">
+      <div style="height:10px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn alt" id="ghCancel">Cancel</button>
+        <button class="btn" id="ghSave">Save & Connect</button>
+      </div>
+    </div>
+  </div>
 
+  <script>
+    // STORAGE KEYS
+    const STORAGE_KEY = 'vocabTrainer_v5_data_v1';
+    const LANG_KEY = 'vocabTrainer_v5_uiLang';
+    const GH_KEY = 'vocabTrainer_v5_github';
+    const DATA_PATH = 'data/vocab_data.json';
+
+    // state
     let data = { lists: [] };
     let currentListId = null;
     let editingWordId = null;
     let session = null;
 
-    function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
-    function loadData(){
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(raw){ try{ data = JSON.parse(raw); }catch(e){ console.error('Invalid data'); data = {lists:[]}; }}
-      if(!data.lists) data.lists = [];
-    }
+    // GitHub config helpers
+    function getGitHubConfig(){ try{ return JSON.parse(localStorage.getItem(GH_KEY) || 'null'); }catch(e){ return null; } }
+    function saveGitHubConfig(cfg){ localStorage.setItem(GH_KEY, JSON.stringify(cfg)); }
+
+    // local data
+    function saveDataLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+    function loadDataLocal(){ const raw = localStorage.getItem(STORAGE_KEY); if(raw){ try{ data = JSON.parse(raw); }catch(e){ console.error('Invalid local data'); data = {lists:[]}; }} if(!data.lists) data.lists = []; }
 
     function uid(prefix='id'){ return prefix + '_' + Math.random().toString(36).slice(2,9); }
+    function showToast(text){ const t=document.getElementById('toast'); t.textContent=text; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
 
-    function showToast(text){ const t = document.getElementById('toast'); t.textContent = text; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2000); }
-
-    // initial sample if empty
-    function ensureSample(){ if(data.lists.length===0){
-      const listId = uid('list');
-      data.lists.push({ id:listId, name:'Sample - Basic', words:[
-        { id:uid('w'), word:'apple', meaning:'táo', correctStreak:0, learned:false, enabled:true },
-        { id:uid('w'), word:'banana', meaning:'chuối', correctStreak:0, learned:false, enabled:true },
-        { id:uid('w'), word:'orange', meaning:'cam', correctStreak:0, learned:false, enabled:true },
-        { id:uid('w'), word:'book', meaning:'sách', correctStreak:0, learned:false, enabled:true },
-        { id:uid('w'), word:'table', meaning:'bàn', correctStreak:0, learned:false, enabled:true }
-      ]});
-      saveData();
-    }}
-
-    // UI helpers
     const listsDiv = document.getElementById('lists');
     const currentListTitle = document.getElementById('currentListTitle');
     const listMeta = document.getElementById('listMeta');
     const wordsTbody = document.getElementById('wordsTbody');
-    const startLearningBtn = document.getElementById('startLearningBtn');
-    const exportArea = document.getElementById('exportArea');
 
-    // Translations for UI labels (EN/VI)
-    const UI_TEXT = {
-      en: {
-        lists: 'Lists',
-        tip: 'Tip: data is saved in your browser (localStorage). You can export/import JSON to transfer.',
-        create: 'Create',
-        import: 'Import JSON',
-        startLearning: 'Start Learning',
-        exportJSON: 'Export JSON',
-        words: 'Words',
-        wordsDesc: 'Add, edit, toggle include/learned status for each word.',
-        showOnlyEnabled: 'Show only enabled',
-        showOnlyUnlearned: 'Show only unlearned',
-        addEdit: 'Add / Edit',
-        meaningPlaceholder: 'Meaning (Vietnamese) — leave empty to auto-translate',
-        add: 'Add', update: 'Update', resetProgress: 'Reset Progress',
-        resetAll: 'Reset all progress',
-        options: 'Options', showMeaning: 'Show meaning during learning', streakNeeded: 'Correct streak to mark learned', learningSession: 'Learning Session', modeAll: 'All words', modeUnlearned: 'Only unlearned', modeLearned: 'Only learned', excludeDisabled: 'Exclude disabled', randomize: 'Randomize', stop: 'Stop', progress: 'Progress', markCorrect: 'Mark Correct', markWrong: 'Mark Wrong', listenAndType: 'Listen and type', typePlaceholder: 'Type the word you hear and press Enter', resetSingleToast: 'Progress reset for'
-      },
-      vi: {
-        lists: 'Danh sách',
-        tip: 'Ghi chú: dữ liệu lưu trên trình duyệt (localStorage). Bạn có thể xuất/nhập JSON để chuyển dữ liệu.',
-        create: 'Tạo',
-        import: 'Nhập JSON',
-        startLearning: 'Bắt đầu học',
-        exportJSON: 'Xuất JSON',
-        words: 'Từ',
-        wordsDesc: 'Thêm, sửa, bật/tắt từ, theo dõi đã thuộc/chưa.',
-        showOnlyEnabled: 'Chỉ hiển thị từ đang bật',
-        showOnlyUnlearned: 'Chỉ hiển thị từ chưa thuộc',
-        addEdit: 'Thêm / Sửa',
-        meaningPlaceholder: 'Nghĩa (Tiếng Việt) — để trống để tự dịch',
-        add: 'Thêm', update: 'Cập nhật', resetProgress: 'Đặt lại tiến độ',
-        resetAll: 'Đặt lại tất cả tiến độ',
-        options: 'Tùy chọn', showMeaning: 'Hiện nghĩa khi học', streakNeeded: 'Số lần đúng liên tiếp để tính đã thuộc', learningSession: 'Phiên học', modeAll: 'Tất cả từ', modeUnlearned: 'Chỉ từ chưa thuộc', modeLearned: 'Chỉ từ đã thuộc', excludeDisabled: 'Bỏ qua từ bị tắt', randomize: 'Ngẫu nhiên', stop: 'Dừng', progress: 'Tiến độ', markCorrect: 'Đánh dấu đúng', markWrong: 'Đánh dấu sai', listenAndType: 'Nghe và gõ lại', typePlaceholder: 'Gõ từ bạn nghe và nhấn Enter', resetSingleToast: 'Đã đặt lại tiến độ cho'
-      }
-    };
+    const UI_TEXT = { en: { notConnected: 'Not connected', connected: 'Connected to GitHub', resetSingle: 'Progress reset for' }, vi: { notConnected: 'Chưa kết nối', connected: 'Đã kết nối GitHub', resetSingle: 'Đã đặt lại tiến độ cho' } };
 
-    function applyUIText(lang){
-      const u = UI_TEXT[lang] || UI_TEXT.en;
-      document.getElementById('lblLists').textContent = u.lists;
-      document.getElementById('footerTip').textContent = u.tip;
-      document.getElementById('createListBtn').textContent = u.create;
-      document.getElementById('importBtn').textContent = u.import;
-      document.getElementById('startLearningBtn').textContent = u.startLearning;
-      document.getElementById('exportBtn').textContent = u.exportJSON;
-      document.getElementById('lblWords').textContent = u.words;
-      document.getElementById('lblWordsDesc').textContent = u.wordsDesc;
-      document.getElementById('lblShowOnlyEnabled').textContent = u.showOnlyEnabled;
-      document.getElementById('lblShowOnlyUnlearned').textContent = u.showOnlyUnlearned;
-      document.getElementById('lblAddEdit').textContent = u.addEdit;
-      document.getElementById('meaningInput').placeholder = u.meaningPlaceholder;
-      document.getElementById('addWordBtn').textContent = u.add;
-      document.getElementById('updateWordBtn').textContent = u.update;
-      document.getElementById('resetAllProgressBtn').textContent = u.resetAll;
-      document.getElementById('lblOptions').textContent = u.options;
-      document.getElementById('lblLearningSession').textContent = u.learningSession;
-      document.getElementById('studyAnswer').placeholder = u.typePlaceholder;
-      document.getElementById('studyWord').textContent = u.listenAndType;
-      document.getElementById('markCorrectBtn').textContent = u.markCorrect;
-      document.getElementById('markWrongBtn').textContent = u.markWrong;
+    // --- GitHub API helpers ---
+    async function ghGetFile(username, repo, branch, path, token){
+      const url = `https://api.github.com/repos/${username}/${repo}/contents/${path}?ref=${branch}`;
+      const res = await fetch(url, { headers: token ? { Authorization: 'token ' + token } : {} });
+      if(res.status === 404) return null;
+      if(!res.ok) throw new Error('GitHub API error: ' + res.status);
+      return await res.json();
     }
 
-    // load UI language preference
-    const savedLang = localStorage.getItem(LANG_KEY) || 'en';
-    document.getElementById('uiLang').value = savedLang; applyUIText(savedLang);
-    document.getElementById('uiLang').addEventListener('change', e=>{ localStorage.setItem(LANG_KEY, e.target.value); applyUIText(e.target.value); });
-
-    // render lists UI
-    function renderLists(){ listsDiv.innerHTML='';
-      data.lists.forEach(l=>{
-        const el = document.createElement('div'); el.className='list-item' + (l.id===currentListId? ' active':'');
-        el.onclick = ()=>{ currentListId = l.id; renderAll(); };
-        el.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><strong>${escapeHtml(l.name)}</strong><div class="small chip">${l.words.length} words</div></div>
-          <div style="display:flex;gap:6px"><button class="btn alt" onclick="event.stopPropagation();renameList('${l.id}')">Rename</button><button class="btn alt" style="background:#fee7e7;color:#b91c1c" onclick="event.stopPropagation();deleteList('${l.id}')">Delete</button></div>`;
-        listsDiv.appendChild(el);
+    async function ghPutFile(username, repo, branch, path, token, contentStr, message){
+      const get = await ghGetFile(username, repo, branch, path, token);
+      const sha = get ? get.sha : undefined;
+      const url = `https://api.github.com/repos/${username}/${repo}/contents/${path}`;
+      const body = { message: message || 'Update vocab data', content: btoa(unescape(encodeURIComponent(contentStr))), branch };
+      if(sha) body.sha = sha;
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: 'token ' + token },
+        body: JSON.stringify(body)
       });
+      if(!res.ok){ const txt = await res.text(); throw new Error('GitHub PUT error: ' + res.status + ' ' + txt); }
+      return await res.json();
     }
 
-    function renameList(id){ const name = prompt('New list name:'); if(name){ const l = data.lists.find(x=>x.id===id); if(l){ l.name = name; saveData(); renderAll(); } }}
-    function deleteList(id){ if(!confirm('Delete this list?')) return; data.lists = data.lists.filter(x=>x.id!==id); if(currentListId===id) currentListId = data.lists.length? data.lists[0].id : null; saveData(); renderAll(); }
+    // Connect UI
+    const githubModal = document.getElementById('githubModal');
+    document.getElementById('connectGithubBtn').onclick = ()=>{
+      const cfg = getGitHubConfig() || {};
+      document.getElementById('ghUser').value = cfg.username || '';
+      document.getElementById('ghRepo').value = cfg.repo || 'vocab-trainer';
+      document.getElementById('ghBranch').value = cfg.branch || 'main';
+      document.getElementById('ghToken').value = cfg.token || '';
+      githubModal.classList.remove('hidden');
+    }
+    document.getElementById('ghCancel').onclick = ()=>{ githubModal.classList.add('hidden'); };
+    document.getElementById('ghSave').onclick = async ()=>{
+      const username = document.getElementById('ghUser').value.trim();
+      const repo = document.getElementById('ghRepo').value.trim();
+      const branch = document.getElementById('ghBranch').value.trim() || 'main';
+      const token = document.getElementById('ghToken').value.trim();
+      if(!username || !repo || !token) return alert('Please fill username, repo, and token.');
+      try{
+        const r = await ghGetFile(username, repo, branch, DATA_PATH, token);
+        saveGitHubConfig({ username, repo, branch, token });
+        updateGithubStatus(true);
+        githubModal.classList.add('hidden'); // moved after status update
 
-    function renderAll(){ renderLists(); renderCurrentList(); }
-
-    function renderCurrentList(){ const list = data.lists.find(x=>x.id===currentListId);
-      if(!list){ currentListTitle.textContent='(no list)'; listMeta.textContent='Select or create a list to begin'; startLearningBtn.disabled=true; wordsTbody.innerHTML=''; return; }
-      currentListTitle.textContent = list.name;
-      listMeta.textContent = `${list.words.length} words in this list`;
-      startLearningBtn.disabled = list.words.length===0;
-      // render words table
-      const showOnlyEnabled = document.getElementById('showOnlyEnabled').checked;
-      const showOnlyUnlearned = document.getElementById('showOnlyUnlearned').checked;
-      wordsTbody.innerHTML='';
-      list.words.forEach(w=>{
-        if(showOnlyEnabled && !w.enabled) return;
-        if(showOnlyUnlearned && w.learned) return;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${escapeHtml(w.word)}</td><td>${escapeHtml(w.meaning)}</td><td class="small">${w.correctStreak}</td><td class="small">${w.learned? 'Yes':'No'}</td><td class="small">${w.enabled? 'Yes':'No'}</td>
-          <td style="text-align:right"><button class='action-btn action-small' onclick="editWord('${w.id}')">✏️</button> <button class='action-btn action-small' onclick="deleteWord('${w.id}')">❌</button> <button class='action-btn action-small' onclick="resetWordProgress('${w.id}')">♻️</button></td>`;
-        wordsTbody.appendChild(tr);
-      });
+        if(r && r.content){
+          const remoteStr = decodeURIComponent(escape(atob(r.content.replace(/\n/g, ''))));
+          const backupKey = STORAGE_KEY + '_backup_' + new Date().toISOString();
+          localStorage.setItem(backupKey, localStorage.getItem(STORAGE_KEY) || '');
+          try{ const remoteObj = JSON.parse(remoteStr); data = remoteObj; saveDataLocal(); renderAll(); showToast('Loaded remote data'); githubModal.classList.add('hidden');}catch(e){ showToast('Remote JSON parse error'); }
+        } else {
+          await pushToGitHub('Initial commit: create data file');
+          showToast('Created data file on GitHub');
+        }
+      }catch(e){ alert('GitHub connection failed: ' + e.message); updateGithubStatus(false); }
     }
 
-    function toggleEnable(wordId){ const list = data.lists.find(x=>x.id===currentListId); const w = list.words.find(x=>x.id===wordId); w.enabled = !w.enabled; saveData(); renderCurrentList(); }
+    function updateGithubStatus(connected){ const cfg = getGitHubConfig(); const status = document.getElementById('githubStatus'); const lang = localStorage.getItem(LANG_KEY) || 'en'; if(connected && cfg){ status.textContent = UI_TEXT[lang].connected + ` — ${cfg.username}/${cfg.repo}@${cfg.branch}`; } else { status.textContent = UI_TEXT[lang].notConnected; } }
+
+    async function pushToGitHub(message){ const cfg = getGitHubConfig(); if(!cfg) throw new Error('No GitHub config'); const contentStr = JSON.stringify(data, null, 2); return await ghPutFile(cfg.username, cfg.repo, cfg.branch, DATA_PATH, cfg.token, contentStr, message); }
+
+    document.getElementById('syncNowBtn').onclick = async ()=>{
+      const cfg = getGitHubConfig(); if(!cfg) return alert('Not connected to GitHub');
+      try{ await pushToGitHub('Sync from web app'); showToast('Synced to GitHub'); }catch(e){ alert('Sync failed: ' + e.message); }
+    }
+
+    // --- core app logic ---
+    function renderLists(){ listsDiv.innerHTML=''; data.lists.forEach(l=>{
+      const el = document.createElement('div'); el.className='list-item' + (l.id===currentListId? ' active':''); el.onclick = ()=>{ currentListId = l.id; renderAll(); };
+      el.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><strong>${escapeHtml(l.name)}</strong><div class="small chip">${l.words.length} words</div></div>
+        <div style="display:flex;gap:6px"><button class="btn alt" onclick="event.stopPropagation();renameList('${l.id}')">Rename</button><button class="btn alt" style="background:#fee7e7;color:#b91c1c" onclick="event.stopPropagation();deleteList('${l.id}')">Delete</button></div>`;
+      listsDiv.appendChild(el);
+    }); }
+    function renameList(id){ const name = prompt('New list name:'); if(name){ const l = data.lists.find(x=>x.id===id); if(l){ l.name = name; saveDataLocal(); renderAll(); } }}
+    function deleteList(id){ if(!confirm('Delete this list?')) return; data.lists = data.lists.filter(x=>x.id!==id); if(currentListId===id) currentListId = data.lists.length? data.lists[0].id : null; saveDataLocal(); renderAll(); }
+
+    function renderAll(){ renderLists(); renderCurrentList(); updateGithubStatus(!!getGitHubConfig()); }
+    function renderCurrentList(){ const list = data.lists.find(x=>x.id===currentListId); if(!list){ currentListTitle.textContent='(no list)'; listMeta.textContent='Select or create a list to begin'; document.getElementById('startLearningBtn').disabled=true; wordsTbody.innerHTML=''; return; }
+      currentListTitle.textContent = list.name; listMeta.textContent = `${list.words.length} words in this list`; document.getElementById('startLearningBtn').disabled = list.words.length===0;
+      const showOnlyEnabled = document.getElementById('showOnlyEnabled').checked; const showOnlyUnlearned = document.getElementById('showOnlyUnlearned').checked; wordsTbody.innerHTML='';
+      list.words.forEach(w=>{ if(showOnlyEnabled && !w.enabled) return; if(showOnlyUnlearned && w.learned) return; const tr = document.createElement('tr'); tr.innerHTML = `<td>${escapeHtml(w.word)}</td><td>${escapeHtml(w.meaning)}</td><td class="small">${w.correctStreak}</td><td class="small">${w.learned? 'Yes':'No'}</td><td class="small">${w.enabled? 'Yes':'No'}</td>
+        <td style="text-align:right"><button class='action-btn action-small' onclick="editWord('${w.id}')">✏️</button> <button class='action-btn action-small' onclick="deleteWord('${w.id}')">❌</button> <button class='action-btn action-small' onclick="resetWordProgress('${w.id}')">♻️</button></td>`; wordsTbody.appendChild(tr); });
+    }
+
     function editWord(wordId){ const list = data.lists.find(x=>x.id===currentListId); const w = list.words.find(x=>x.id===wordId); if(!w) return; editingWordId = w.id; document.getElementById('wordInput').value = w.word; document.getElementById('meaningInput').value = w.meaning; document.getElementById('updateWordBtn').disabled = false; document.getElementById('addWordBtn').disabled = true; }
-    function deleteWord(wordId){ if(!confirm('Delete this word?')) return; const list = data.lists.find(x=>x.id===currentListId); list.words = list.words.filter(x=>x.id!==wordId); saveData(); renderCurrentList(); }
+    function deleteWord(wordId){ if(!confirm('Delete this word?')) return; const list = data.lists.find(x=>x.id===currentListId); list.words = list.words.filter(x=>x.id!==wordId); saveDataLocal(); try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Delete a word'); }catch(e){} renderCurrentList(); }
 
-    // reset single word progress
-    function resetWordProgress(wordId){ const list = data.lists.find(x=>x.id===currentListId); const w = list.words.find(x=>x.id===wordId); if(!w) return; w.correctStreak = 0; w.learned = false; saveData(); renderCurrentList(); const lang = localStorage.getItem(LANG_KEY) || 'en'; const msg = (lang==='vi' ? UI_TEXT.vi.resetSingleToast : UI_TEXT.en.resetSingleToast) + ` "${w.word}"`; showToast(msg); }
+    function resetWordProgress(wordId){ const list = data.lists.find(x=>x.id===currentListId); const w = list.words.find(x=>x.id===wordId); if(!w) return; w.correctStreak = 0; w.learned = false; saveDataLocal(); renderCurrentList(); const lang = localStorage.getItem(LANG_KEY) || 'en'; showToast((lang==='vi'?UI_TEXT.vi.resetSingle:UI_TEXT.en.resetSingle) + ` "${w.word}"`); try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Reset single word progress'); }catch(e){} }
 
-    // add/update with auto-translate
-    document.getElementById('createListBtn').onclick = ()=>{
-      const name = document.getElementById('newListName').value.trim(); if(!name) return alert('Enter a list name');
-      const id = uid('list'); data.lists.push({id,name,words:[]}); document.getElementById('newListName').value=''; saveData(); currentListId = id; renderAll();
-    }
+    document.getElementById('createListBtn').onclick = ()=>{ const name = document.getElementById('newListName').value.trim(); if(!name) return alert('Enter a list name'); const id = uid('list'); data.lists.push({id,name,words:[]}); document.getElementById('newListName').value=''; saveDataLocal(); currentListId = id; renderAll(); }
 
     async function autoTranslateToVI(text){
       try{
@@ -345,102 +344,80 @@
         const j = await res.json();
         const trans = j && j.responseData && j.responseData.translatedText ? j.responseData.translatedText : '';
         return trans || '';
-      }catch(e){ console.warn('Auto-translate failed', e); return '';}    }
+      }catch(e){ console.warn('Auto-translate failed', e); return '';}
+    }
 
     document.getElementById('addWordBtn').onclick = async ()=>{
       const wv = document.getElementById('wordInput').value.trim(); let mv = document.getElementById('meaningInput').value.trim();
       if(!wv) return alert('Enter a word'); const list = data.lists.find(x=>x.id===currentListId); if(!list) return alert('Select a list');
       if(!mv){ document.getElementById('meaningInput').placeholder = 'Translating...'; mv = await autoTranslateToVI(wv); document.getElementById('meaningInput').placeholder = 'Meaning (Vietnamese) — leave empty to auto-translate'; }
-      list.words.push({ id:uid('w'), word:wv, meaning:mv, correctStreak:0, learned:false, enabled:true }); saveData(); renderCurrentList(); document.getElementById('wordInput').value=''; document.getElementById('meaningInput').value=''; showToast('Word added');
+      list.words.push({ id:uid('w'), word:wv, meaning:mv, correctStreak:0, learned:false, enabled:true });
+      saveDataLocal(); renderCurrentList(); document.getElementById('wordInput').value=''; document.getElementById('meaningInput').value=''; showToast('Word added');
+      try{ const cfg = getGitHubConfig(); if(cfg) await pushToGitHub('Add word'); showToast('Synced to GitHub'); }catch(e){}
     }
 
-    document.getElementById('updateWordBtn').onclick = ()=>{
-      if(!editingWordId) return; const list = data.lists.find(x=>x.id===currentListId); const w = list.words.find(x=>x.id===editingWordId); w.word = document.getElementById('wordInput').value.trim(); w.meaning = document.getElementById('meaningInput').value.trim(); editingWordId = null; document.getElementById('updateWordBtn').disabled=true; document.getElementById('addWordBtn').disabled=false; saveData(); renderCurrentList(); document.getElementById('wordInput').value=''; document.getElementById('meaningInput').value=''; showToast('Word updated'); }
-
-    document.getElementById('resetAllProgressBtn').onclick = ()=>{
-      if(!confirm('Reset progress for this list?')) return; const list = data.lists.find(x=>x.id===currentListId); list.words.forEach(w=>{ w.correctStreak = 0; w.learned=false; }); saveData(); renderCurrentList(); showToast('All progress reset'); }
-
-    // export/import
-    document.getElementById('exportBtn').onclick = ()=>{
-      const list = data.lists.find(x=>x.id===currentListId); if(!list) return alert('Select a list'); exportArea.value = JSON.stringify(list, null, 2); }
-    document.getElementById('copyExportBtn').onclick = ()=>{ exportArea.select(); document.execCommand('copy'); showToast('Copied'); }
-    document.getElementById('applyImportBtn').onclick = ()=>{
-      try{ const obj = JSON.parse(exportArea.value); if(!obj || !obj.name || !Array.isArray(obj.words)) return alert('Invalid list JSON'); obj.id = uid('list'); data.lists.push(obj); saveData(); renderAll(); showToast('Imported'); }catch(e){ alert('Invalid JSON'); }
+    document.getElementById('updateWordBtn').onclick = async ()=>{
+      if(!editingWordId) return; const list = data.lists.find(x=>x.id===currentListId); const w = list.words.find(x=>x.id===editingWordId); w.word = document.getElementById('wordInput').value.trim(); w.meaning = document.getElementById('meaningInput').value.trim(); editingWordId = null; document.getElementById('updateWordBtn').disabled=true; document.getElementById('addWordBtn').disabled=false; saveDataLocal(); renderCurrentList(); document.getElementById('wordInput').value=''; document.getElementById('meaningInput').value=''; showToast('Word updated'); try{ const cfg = getGitHubConfig(); if(cfg) await pushToGitHub('Update word'); showToast('Synced to GitHub'); }catch(e){}
     }
 
-    document.getElementById('importBtn').onclick = ()=>{ const text = prompt('Paste list JSON here (exported JSON format)'); if(!text) return; try{ const obj = JSON.parse(text); if(!obj || !obj.name || !Array.isArray(obj.words)) return alert('Invalid'); obj.id = uid('list'); data.lists.push(obj); saveData(); renderAll(); showToast('Imported'); }catch(e){ alert('Invalid JSON'); }}
+    document.getElementById('resetAllProgressBtn').onclick = ()=>{ if(!confirm('Reset progress for this list?')) return; const list = data.lists.find(x=>x.id===currentListId); list.words.forEach(w=>{ w.correctStreak = 0; w.learned=false; }); saveDataLocal(); renderCurrentList(); showToast('All progress reset'); try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Reset all progress'); }catch(e){} }
+
+    document.getElementById('exportBtn').onclick = ()=>{ const list = data.lists.find(x=>x.id===currentListId); if(!list) return alert('Select a list'); const txt = JSON.stringify(list, null, 2); const a = document.createElement('a'); const blob = new Blob([txt], {type:'application/json'}); a.href = URL.createObjectURL(blob); a.download = (list.name||'list') + '.json'; a.click(); showToast('Exported'); }
+
+    document.getElementById('copyExportBtn').addEventListener('click', ()=>{ const ta = document.getElementById('exportArea'); ta.select(); document.execCommand('copy'); showToast('Copied'); });
+    document.getElementById('applyImportBtn').addEventListener('click', ()=>{ try{ const obj = JSON.parse(document.getElementById('exportArea').value); if(!obj || !obj.name || !Array.isArray(obj.words)) return alert('Invalid list JSON'); obj.id = uid('list'); data.lists.push(obj); saveDataLocal(); renderAll(); showToast('Imported'); }catch(e){ alert('Invalid JSON'); } });
 
     // learning session logic
-    function startLearning(){
-      const list = data.lists.find(x=>x.id===currentListId);
-      if(!list) return alert('Select a list');
-      const mode = document.getElementById('modeSelect').value;
-      const excludeDisabled = document.getElementById('excludeDisabled').checked;
-      const randomize = document.getElementById('randomize').checked;
-
-      let pool = list.words.slice();
-      if(excludeDisabled) pool = pool.filter(w=>w.enabled);
-      if(mode === 'listening' || mode === 'writing') pool = pool.filter(w=>!w.learned);
-      if(mode === 'review') pool = pool.filter(w=>w.learned);
-      if(pool.length === 0) return alert('No words match selection.');
-      if(randomize) shuffle(pool);
-
-      session = { pool: pool.slice(), index:0, correct:0, wrong:0, newlyLearned:[], mode };
-      // set internal showMeaning according to mode
-      if(mode === 'listening') session.showMeaning = false; else session.showMeaning = true;
-
-      document.getElementById('learningArea').style.display='block';
-      document.getElementById('manageArea').style.display='none';
-      document.getElementById('studyAnswer').value='';
-      updateSessionUI(); speakCurrent(); document.getElementById('studyAnswer').focus();
-    }
-
+    function startLearning(){ const list = data.lists.find(x=>x.id===currentListId); if(!list) return alert('Select a list'); const mode = document.getElementById('modeSelect').value; const excludeDisabled = document.getElementById('excludeDisabled').checked; const randomize = document.getElementById('randomize').checked; let pool = list.words.slice(); if(excludeDisabled) pool = pool.filter(w=>w.enabled); if(mode === 'listening' || mode === 'writing') pool = pool.filter(w=>!w.learned); if(mode === 'review') pool = pool.filter(w=>w.learned); if(pool.length === 0) return alert('No words match selection.'); if(randomize) shuffle(pool); session = { pool: pool.slice(), index:0, correct:0, wrong:0, newlyLearned:[], mode }; session.showMeaning = (mode==='writing' || mode==='review'); document.getElementById('learningArea').style.display='block'; document.getElementById('manageArea').style.display='none'; document.getElementById('studyAnswer').value=''; updateSessionUI(); speakCurrent(); document.getElementById('studyAnswer').focus(); }
     document.getElementById('startLearningBtn').onclick = ()=> startLearning();
     document.getElementById('stopSessionBtn').onclick = ()=>{ if(confirm('Stop session?')) endSession(); }
-
-    function endSession(){ if(!session) return; alert(`Session ended. Correct: ${session.correct}, Wrong: ${session.wrong}, Newly learned: ${session.newlyLearned.length}`); session=null; document.getElementById('learningArea').style.display='none'; document.getElementById('manageArea').style.display='block'; renderCurrentList(); }
-
+    function endSession(){ if(!session) return; try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Sync after session'); }catch(e){} alert(`Session ended. Correct: ${session.correct}, Wrong: ${session.wrong}, Newly learned: ${session.newlyLearned.length}`); session=null; document.getElementById('learningArea').style.display='none'; document.getElementById('manageArea').style.display='block'; renderCurrentList(); }
     function updateSessionUI(){ if(!session) return; document.getElementById('sessionProgress').textContent = `${session.index+1} / ${session.pool.length}`; const cw = session.pool[session.index]; document.getElementById('studyWord').textContent = session.mode === 'writing' ? (cw.meaning || '—') : (session.showMeaning ? (cw.meaning || '—') : '🔊 Listen and type'); document.getElementById('studyMeaning').textContent = session.showMeaning ? cw.meaning || '' : ''; document.getElementById('sessionResult').textContent = `Correct: ${session.correct} • Wrong: ${session.wrong}`; }
-
     function speakCurrent(){ if(!session) return; const cw = session.pool[session.index]; speak(cw.word); }
-
     document.getElementById('playWordBtn').onclick = () => { if(session) speakCurrent(); }
     document.getElementById('studyAnswer').addEventListener('keydown', (e)=>{ if(e.key === 'Enter') checkAnswer(); });
     document.getElementById('markCorrectBtn').onclick = ()=>{ markResult(true); }
     document.getElementById('markWrongBtn').onclick = ()=>{ markResult(false); }
-
     function checkAnswer(){ if(!session) return; const input = document.getElementById('studyAnswer').value.trim(); const cw = session.pool[session.index]; const correct = cw.word.trim().toLowerCase(); if(input.toLowerCase() === correct){ markResult(true); } else { markResult(false); } }
-
-    function markResult(isCorrect){ const cw = session.pool[session.index]; const list = data.lists.find(x=>x.id===currentListId); const actual = list.words.find(w=>w.id===cw.id);
-      const streakNeeded = parseInt(document.getElementById('streakNeeded').value) || 3;
-      if(isCorrect){ session.correct++; actual.correctStreak = (actual.correctStreak||0) + 1; if(actual.correctStreak >= streakNeeded && !actual.learned){ actual.learned = true; session.newlyLearned.push(actual); }
-        sessionResultFlash('Correct', true);
-      } else { session.wrong++; actual.correctStreak = 0; sessionResultFlash(`Wrong — answer: ${actual.word}`, false); }
-      saveData();
-      if(session.index < session.pool.length - 1){ session.index++; document.getElementById('studyAnswer').value=''; updateSessionUI(); setTimeout(()=>{ speakCurrent(); document.getElementById('studyAnswer').focus(); },800); }
-      else { endSession(); }
-    }
-
+    function markResult(isCorrect){ const cw = session.pool[session.index]; const list = data.lists.find(x=>x.id===currentListId); const actual = list.words.find(w=>w.id===cw.id); const streakNeeded = parseInt(document.getElementById('streakNeeded').value) || 3; if(isCorrect){ session.correct++; actual.correctStreak = (actual.correctStreak||0) + 1; if(actual.correctStreak >= streakNeeded && !actual.learned){ actual.learned = true; session.newlyLearned.push(actual); } sessionResultFlash('Correct', true); } else { session.wrong++; actual.correctStreak = 0; sessionResultFlash(`Wrong — answer: ${actual.word}`, false); } saveDataLocal(); try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Update progress'); }catch(e){} if(session.index < session.pool.length - 1){ session.index++; document.getElementById('studyAnswer').value=''; updateSessionUI(); setTimeout(()=>{ speakCurrent(); document.getElementById('studyAnswer').focus(); },800); } else { endSession(); } }
     function sessionResultFlash(text, ok){ const el = document.getElementById('sessionResult'); el.textContent = text; el.style.color = ok? 'green':'red'; setTimeout(()=>{ if(session) updateSessionUI(); el.style.color=''; },800); }
 
     // speech
     let voices = [];
-    function loadVoices(){ voices = speechSynthesis.getVoices().filter(v=>v.lang.startsWith('en') || v.lang.startsWith('en-'));
-      if(!voices.length) voices = speechSynthesis.getVoices(); }
+    function loadVoices(){ voices = speechSynthesis.getVoices().filter(v=>v.lang.startsWith('en') || v.lang.startsWith('en-')); if(!voices.length) voices = speechSynthesis.getVoices(); }
     loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices;
+    function speak(text){ if(!('speechSynthesis' in window)){ alert('SpeechSynthesis not supported'); return; } const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; if(voices && voices.length) u.voice = voices[0]; u.rate = 0.95; speechSynthesis.cancel(); speechSynthesis.speak(u); }
 
-    function speak(text){ if(!('speechSynthesis' in window)){ alert('SpeechSynthesis not supported in this browser'); return; } const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; if(voices && voices.length) u.voice = voices[0]; u.rate = 0.95; speechSynthesis.cancel(); speechSynthesis.speak(u); }
-
-    // utilities
+    // utils
     function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } }
-    function escapeHtml(s){ if(!s) return ''; return s.replace(/[&"'<>]/g, c=>({ '&':'&amp;','"':'&quot;',"'":"&#39;",'<':'&lt;','>':'&gt;' }[c])); }
+    function escapeHtml(s){ if(!s) return ''; return s.replace(/[&\"'<>]/g, c=>({ '&':'&amp;','\"':'&quot;',"'":"&#39;",'<':'&lt;','>':'&gt;' }[c])); }
 
     // events
     document.getElementById('showOnlyEnabled').addEventListener('change', renderCurrentList);
     document.getElementById('showOnlyUnlearned').addEventListener('change', renderCurrentList);
 
-    // initial load
-    loadData(); ensureSample(); if(!currentListId && data.lists.length) currentListId = data.lists[0].id; renderAll();
+    // init
+    loadDataLocal();
+    (async ()=>{
+      const cfg = getGitHubConfig();
+      if(cfg){
+        updateGithubStatus(true);
+        try{
+          const remote = await ghGetFile(cfg.username, cfg.repo, cfg.branch, DATA_PATH, cfg.token);
+          if(remote && remote.content){
+            const remoteStr = decodeURIComponent(escape(atob(remote.content.replace(/\n/g, ''))));
+            const remoteObj = JSON.parse(remoteStr);
+            const backupKey = STORAGE_KEY + '_backup_' + new Date().toISOString();
+            localStorage.setItem(backupKey, localStorage.getItem(STORAGE_KEY) || '');
+            data = remoteObj; saveDataLocal(); showToast('Loaded data from GitHub');
+          }
+        }catch(e){ console.warn('Load remote failed', e); updateGithubStatus(false); }
+      }
+      if(!currentListId && data.lists.length) currentListId = data.lists[0].id;
+      ensureSample(); renderAll();
+    })();
+
+    function ensureSample(){ if(data.lists.length===0){ const listId = uid('list'); data.lists.push({ id:listId, name:'Sample - Basic', words:[ { id:uid('w'), word:'apple', meaning:'táo', correctStreak:0, learned:false, enabled:true }, { id:uid('w'), word:'banana', meaning:'chuối', correctStreak:0, learned:false, enabled:true }, { id:uid('w'), word:'orange', meaning:'cam', correctStreak:0, learned:false, enabled:true }, { id:uid('w'), word:'book', meaning:'sách', correctStreak:0, learned:false, enabled:true }, { id:uid('w'), word:'table', meaning:'bàn', correctStreak:0, learned:false, enabled:true } ]}); saveDataLocal(); } }
   </script>
 </body>
 </html>
