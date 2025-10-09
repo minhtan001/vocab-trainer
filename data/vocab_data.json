@@ -43,6 +43,14 @@
           "correctStreak": 0,
           "learned": false,
           "enabled": true
+        },
+        {
+          "id": "w_zrpg2xj",
+          "word": "home",
+          "meaning": "trang chủ",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
         }
       ]
     }
