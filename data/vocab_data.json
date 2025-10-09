@@ -73,6 +73,14 @@
           "correctStreak": 0,
           "learned": false,
           "enabled": true
+        },
+        {
+          "id": "w_2cua1dd",
+          "word": "dish",
+          "meaning": "đĩa",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
         }
       ]
     }
