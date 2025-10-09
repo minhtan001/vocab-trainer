@@ -8,7 +8,7 @@
           "id": "w_8ke4rp0",
           "word": "apple",
           "meaning": "táo",
-          "correctStreak": 0,
+          "correctStreak": 1,
           "learned": false,
           "enabled": true
         },
@@ -16,7 +16,7 @@
           "id": "w_ld7ui4y",
           "word": "banana",
           "meaning": "chuối",
-          "correctStreak": 0,
+          "correctStreak": 1,
           "learned": false,
           "enabled": true
         },
@@ -24,7 +24,7 @@
           "id": "w_hawka2m",
           "word": "orange",
           "meaning": "cam",
-          "correctStreak": 0,
+          "correctStreak": 1,
           "learned": false,
           "enabled": true
         },
@@ -32,7 +32,7 @@
           "id": "w_9xtysbr",
           "word": "book",
           "meaning": "sách",
-          "correctStreak": 0,
+          "correctStreak": 1,
           "learned": false,
           "enabled": true
         },
@@ -40,7 +40,7 @@
           "id": "w_6yw9y9z",
           "word": "table",
           "meaning": "bàn",
-          "correctStreak": 0,
+          "correctStreak": 1,
           "learned": false,
           "enabled": true
         },
@@ -48,7 +48,7 @@
           "id": "w_zrpg2xj",
           "word": "home",
           "meaning": "trang chủ",
-          "correctStreak": 0,
+          "correctStreak": 1,
           "learned": false,
           "enabled": true
         },
@@ -56,7 +56,7 @@
           "id": "w_4lbve21",
           "word": "class",
           "meaning": "hạng",
-          "correctStreak": 1,
+          "correctStreak": 2,
           "learned": false,
           "enabled": true
         }
