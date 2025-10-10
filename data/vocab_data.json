@@ -10,13 +10,13 @@
           "meaning": "táo",
           "correctStreak": 1,
           "learned": false,
-          "enabled": false
+          "enabled": true
         },
         {
           "id": "w_ld7ui4y",
           "word": "banana",
           "meaning": "chuối",
-          "correctStreak": 1,
+          "correctStreak": 0,
           "learned": false,
           "enabled": true
         },
@@ -24,9 +24,9 @@
           "id": "w_hawka2m",
           "word": "orange",
           "meaning": "cam",
-          "correctStreak": 1,
+          "correctStreak": 0,
           "learned": false,
-          "enabled": false
+          "enabled": true
         },
         {
           "id": "w_9xtysbr",
@@ -34,31 +34,31 @@
           "meaning": "sách",
           "correctStreak": 1,
           "learned": false,
-          "enabled": false
+          "enabled": true
         },
         {
           "id": "w_6yw9y9z",
           "word": "table",
           "meaning": "bàn",
-          "correctStreak": 1,
+          "correctStreak": 0,
           "learned": false,
-          "enabled": false
+          "enabled": true
         },
         {
           "id": "w_zrpg2xj",
           "word": "home",
           "meaning": "trang chủ",
-          "correctStreak": 1,
-          "learned": false,
-          "enabled": false
+          "correctStreak": 3,
+          "learned": true,
+          "enabled": true
         },
         {
           "id": "w_4lbve21",
           "word": "class",
           "meaning": "hạng",
-          "correctStreak": 2,
-          "learned": false,
-          "enabled": false
+          "correctStreak": 3,
+          "learned": true,
+          "enabled": true
         }
       ]
     },
