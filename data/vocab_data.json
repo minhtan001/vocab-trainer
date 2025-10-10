@@ -63,21 +63,461 @@
       ]
     },
     {
-      "id": "list_wra33nr",
-      "name": "things",
+      "id": "list_szjdxmq",
+      "name": "dailydictation",
       "words": [
         {
-          "id": "w_wdl20w7",
-          "word": "door",
-          "meaning": "cửa ",
+          "id": "w_rmhod13",
+          "word": "shovel",
+          "meaning": "cái xẻng",
           "correctStreak": 0,
           "learned": false,
           "enabled": true
         },
         {
-          "id": "w_2cua1dd",
-          "word": "dish",
-          "meaning": "đĩa",
+          "id": "w_m843ny2",
+          "word": "mittens",
+          "meaning": "găng tay",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_v1sy14c",
+          "word": "scarf",
+          "meaning": "khăn quàng cổ",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_y10crs5",
+          "word": "kindergarten",
+          "meaning": "Kindergarten ",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_z3ycbn8",
+          "word": "national anthem",
+          "meaning": "quốc ca",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_38h1odj",
+          "word": "yell",
+          "meaning": "hét lên",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_japer2s",
+          "word": "recess",
+          "meaning": "phần mở rộng ở cuối ống",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_zwkc1z3",
+          "word": "carpet",
+          "meaning": "tấm thảm",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_5bwikq0",
+          "word": "angel",
+          "meaning": "thiên sứ",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_f6b6p2k",
+          "word": "neighbor",
+          "meaning": "hàng xóm lân cận",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_q5iz1ti",
+          "word": "purple",
+          "meaning": "tím",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_a13hqq4",
+          "word": "weeds",
+          "meaning": "Cỏ dại",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_acwr1ab",
+          "word": "insects",
+          "meaning": "- Tôi nhận được một tin nhắn.",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_xdf54mj",
+          "word": "garage",
+          "meaning": "nhà để ô tô",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_1hjnelu",
+          "word": "dining",
+          "meaning": "ăn uống",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_ssixyc2",
+          "word": "behind",
+          "meaning": "sau, ở đằng sau",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_5r51ywj",
+          "word": "theater",
+          "meaning": "nhà hát",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_adouda7",
+          "word": "corner",
+          "meaning": "góc (tường, nhà, phố...)",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_ayuvly7",
+          "word": "church",
+          "meaning": "nhà thờ",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_2wdy766",
+          "word": "barbershop",
+          "meaning": "Tiệm hớt tóc",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_nbgkns0",
+          "word": "orange",
+          "meaning": "cam",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_7lrxhp7",
+          "word": "left",
+          "meaning": "trái",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_wnh6q4b",
+          "word": "insect repellent",
+          "meaning": "Thuốc đuổi muỗi",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_lyr5pwv",
+          "word": "roasted",
+          "meaning": "quay",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_jk7sz0z",
+          "word": "marshmallows",
+          "meaning": "kẹo dẻo",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_5zq2s14",
+          "word": "Saturday",
+          "meaning": "Thứ bảy",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_p6h3mun",
+          "word": "canoeing",
+          "meaning": "chèo xuồng",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_z3og13m",
+          "word": "jays",
+          "meaning": "chim giẻ cùi",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_ugmroy1",
+          "word": "hummingbirds",
+          "meaning": "Chim ruồi.",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_wg2a5b3",
+          "word": "raccoon",
+          "meaning": "Gấu mèo Mỹ",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_w69hu65",
+          "word": "squirrel",
+          "meaning": "Họ Sóc",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_w63heih",
+          "word": "vacation",
+          "meaning": "kỳ nghỉ",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_nvwdo71",
+          "word": "closets",
+          "meaning": "Phòng để đồ.",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_cxsfvdy",
+          "word": "basement",
+          "meaning": "móng cơ bản",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_l2grquy",
+          "word": "furniture",
+          "meaning": "đồ đạc",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_yowpm4q",
+          "word": "garage",
+          "meaning": "nhà để ô tô",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_3a2h2pg",
+          "word": "maple",
+          "meaning": "Phong",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_qtzrp08",
+          "word": "paws",
+          "meaning": "bàn chân",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_6gdq6jl",
+          "word": "fur",
+          "meaning": "bộ da lông thú",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_f70kl64",
+          "word": "hunt",
+          "meaning": "săn, đi săn",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_gd597ok",
+          "word": "scratched",
+          "meaning": "trầy xước",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_78ogocm",
+          "word": "female",
+          "meaning": "nữ",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_6ycp1fv",
+          "word": "exercises",
+          "meaning": "bài tập",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_doafgyv",
+          "word": "lifts",
+          "meaning": "thang máy",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_56e255w",
+          "word": "weights",
+          "meaning": "tạ",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_vgpftvq",
+          "word": "muscles",
+          "meaning": "Cơ",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_hg1xqzt",
+          "word": "proud",
+          "meaning": "tự hào, kiêu hãnh",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_e1o7pfb",
+          "word": "beautiful",
+          "meaning": "xinh đẹp",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_x1f1spq",
+          "word": "favorite",
+          "meaning": "mục yêu thích",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_ewjsnz2",
+          "word": "practices",
+          "meaning": "hoạt động tốt ",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_hhk8nce",
+          "word": "popular",
+          "meaning": "phổ biến",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_k0y1y5r",
+          "word": "always",
+          "meaning": "luôn luôn",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_8lecth7",
+          "word": "Coaches",
+          "meaning": "Huấn luyện viên*",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_7g8ge4k",
+          "word": "League",
+          "meaning": "Giải",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_n95z8sq",
+          "word": "college",
+          "meaning": "trường cao đẳng, trường đại học",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_3ixin8l",
+          "word": "education",
+          "meaning": "giáo dục, rèn luyện",
+          "correctStreak": 0,
+          "learned": false,
+          "enabled": true
+        },
+        {
+          "id": "w_rgboyms",
+          "word": "bunnies",
+          "meaning": "thỏ con",
           "correctStreak": 0,
           "learned": false,
           "enabled": true
