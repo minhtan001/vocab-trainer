@@ -33,7 +33,9 @@
       width: 320px;
       background: linear-gradient(180deg, #ffffff, #fbfdff);
       border-right: 1px solid #e6eef9;
-      padding: 18px
+      padding: 18px;
+      height: 100vh;
+      overflow-y: auto;
     }
 
     .brand {
@@ -105,7 +107,10 @@
 
     .word-table {
       width: 100%;
-      border-collapse: collapse
+      border-collapse: collapse;
+      display: block;
+      max-height: 500px;
+      overflow-y: auto;
     }
 
     table th,
@@ -442,6 +447,18 @@
     </div>
   </div>
 
+  <!-- Wrong Words Modal -->
+  <div id="wrongWordsModal" class="modal hidden">
+    <div class="modal-card">
+      <h3>Words you got wrong</h3>
+      <div id="wrongWordsList"></div>
+      <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn alt" id="closeWrongWordsBtn">Close</button>
+        <button class="btn" id="retryWrongWordsBtn">Retry Wrong Words</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // STORAGE KEYS
     const STORAGE_KEY = 'vocabTrainer_v5_data_v1';
@@ -458,7 +475,7 @@
         lblShowOnlyUnlearned: 'Show only unlearned',
         lblLearningSession: 'Learning Session',
         lblOptions: 'Options',
-        startBtn: 'Start Learning'
+        startLearningBtn: 'Start Learning'
       },
       vi: {
         lblLists: 'Danh sách',
@@ -469,7 +486,7 @@
         lblShowOnlyUnlearned: 'Chỉ hiển thị từ chưa học',
         lblLearningSession: 'Buổi học',
         lblOptions: 'Tùy chọn',
-        startBtn: 'Bắt đầu học'
+        startLearningBtn: 'Bắt đầu học'
       }
     };
 
@@ -502,6 +519,8 @@
     let currentListId = null;
     let editingWordId = null;
     let session = null;
+    let lastWord = null; // Biến lưu từ vừa học
+    let wrongWords = []; // Lưu từ sai trong session
 
     // GitHub config helpers
     function getGitHubConfig() { try { return JSON.parse(localStorage.getItem(GH_KEY) || 'null'); } catch (e) { return null; } }
@@ -707,22 +726,91 @@
     document.getElementById('stopSessionBtn').onclick = () => { if (confirm('Stop session?')) endSession(); }
     function endSession() {
       if (!session) return;
-      //try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Sync after session'); }catch(e){} 
-      alert(`Session ended. Correct: ${session.correct}, Wrong: ${session.wrong}, Newly learned: ${session.newlyLearned.length}`); session = null; document.getElementById('learningArea').style.display = 'none'; document.getElementById('manageArea').style.display = 'block'; renderCurrentList();
+      alert(`Session ended. Correct: ${session.correct}, Wrong: ${session.wrong}, Newly learned: ${session.newlyLearned.length}`); session = null; wrongWords = []; document.getElementById('learningArea').style.display = 'none'; document.getElementById('manageArea').style.display = 'block'; renderCurrentList();
     }
     function updateSessionUI() { if (!session) return; document.getElementById('sessionProgress').textContent = `${session.index + 1} / ${session.pool.length}`; const cw = session.pool[session.index]; document.getElementById('studyWord').textContent = session.mode === 'writing' ? (cw.meaning || '—') : (session.showMeaning ? (cw.meaning || '—') : '🔊 Listen and type'); document.getElementById('studyMeaning').textContent = session.showMeaning ? cw.meaning || '' : ''; document.getElementById('sessionResult').textContent = `Correct: ${session.correct} • Wrong: ${session.wrong}`; }
-    function speakCurrent() { if (!session) return; const cw = session.pool[session.index]; speak(cw.word); }
-    document.getElementById('playWordBtn').onclick = () => { if (session) speakCurrent(); }
-    document.getElementById('studyAnswer').addEventListener('keydown', (e) => { if (e.key === 'Enter') checkAnswer(); });
+    function speakCurrent() {
+      if (!session) return;
+      const cw = session.pool[session.index];
+      lastWord = cw.word; // Lưu lại từ vừa học
+      speak(cw.word);
+    }
+    document.getElementById('playWordBtn').onclick = () => { if (session) speakCurrent(); }    
+    document.getElementById('studyAnswer').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        checkAnswer();
+      }
+    });
     document.getElementById('markCorrectBtn').onclick = () => { markResult(true); }
-    document.getElementById('markWrongBtn').onclick = () => { markResult(false); }
+    document.getElementById('markWrongBtn').onclick = () => { markResult(false); }    
     function checkAnswer() { if (!session) return; const input = document.getElementById('studyAnswer').value.trim(); const cw = session.pool[session.index]; const correct = cw.word.trim().toLowerCase(); if (input.toLowerCase() === correct) { markResult(true); } else { markResult(false); } }
     function markResult(isCorrect) {
-      const cw = session.pool[session.index]; const list = data.lists.find(x => x.id === currentListId); const actual = list.words.find(w => w.id === cw.id); const streakNeeded = parseInt(document.getElementById('streakNeeded').value) || 3; if (isCorrect) { session.correct++; actual.correctStreak = (actual.correctStreak || 0) + 1; if (actual.correctStreak >= streakNeeded && !actual.learned) { actual.learned = true; session.newlyLearned.push(actual); } sessionResultFlash('Correct', true); } else { session.wrong++; actual.correctStreak = 0; sessionResultFlash(`Wrong — answer: ${actual.word}`, false); } saveDataLocal();
-      //try{ const cfg = getGitHubConfig(); if(cfg) pushToGitHub('Update progress'); }catch(e){} 
-      if (session.index < session.pool.length - 1) { session.index++; document.getElementById('studyAnswer').value = ''; updateSessionUI(); setTimeout(() => { speakCurrent(); document.getElementById('studyAnswer').focus(); }, 800); } else { endSession(); }
+      const cw = session.pool[session.index];
+      const list = data.lists.find(x => x.id === currentListId);
+      const actual = list.words.find(w => w.id === cw.id);
+      const streakNeeded = parseInt(document.getElementById('streakNeeded').value) || 3;
+      if (isCorrect) {
+        session.correct++;
+        actual.correctStreak = (actual.correctStreak || 0) + 1;
+        if (actual.correctStreak >= streakNeeded && !actual.learned) {
+          actual.learned = true;
+          session.newlyLearned.push(actual);
+        }
+        sessionResultFlash('Correct', true);
+      } else {
+        session.wrong++;
+        actual.correctStreak = 0;
+        wrongWords.push(cw); // Lưu từ sai
+        sessionResultFlash(`Wrong — answer: ${actual.word}`, false);
+      }
+      saveDataLocal();
+      if (session.index < session.pool.length - 1) {
+        session.index++;
+        document.getElementById('studyAnswer').value = '';
+        updateSessionUI();
+        setTimeout(() => { speakCurrent(); document.getElementById('studyAnswer').focus(); }, 800);
+      } else {
+        showWrongWordsModal(); // Hiện modal khi kết thúc
+      }
     }
-    function sessionResultFlash(text, ok) { const el = document.getElementById('sessionResult'); el.textContent = text; el.style.color = ok ? 'green' : 'red'; setTimeout(() => { if (session) updateSessionUI(); el.style.color = ''; }, 800); }
+
+    function showWrongWordsModal() {
+      if (!wrongWords.length) {
+        endSession();
+        return;
+      }
+      const modal = document.getElementById('wrongWordsModal');
+      const listDiv = document.getElementById('wrongWordsList');
+      listDiv.innerHTML = '<ul>' + wrongWords.map(w => `<li><strong>${escapeHtml(w.word)}</strong> — ${escapeHtml(w.meaning)}</li>`).join('') + '</ul>';
+      modal.classList.remove('hidden');
+    }
+
+    document.getElementById('closeWrongWordsBtn').onclick = () => {
+      document.getElementById('wrongWordsModal').classList.add('hidden');
+      endSession();
+    };
+
+    document.getElementById('retryWrongWordsBtn').onclick = () => {
+      if (!wrongWords.length) return;
+      session = {
+        pool: wrongWords.slice(),
+        index: 0,
+        correct: 0,
+        wrong: 0,
+        newlyLearned: [],
+        mode: 'writing',
+        showMeaning: true
+      };
+      wrongWords = [];
+      document.getElementById('wrongWordsModal').classList.add('hidden');
+      document.getElementById('learningArea').style.display = 'block';
+      document.getElementById('manageArea').style.display = 'none';
+      document.getElementById('studyAnswer').value = '';
+      updateSessionUI();
+      speakCurrent();
+      document.getElementById('studyAnswer').focus();
+    };
 
     // speech
     let voices = [];
@@ -770,6 +858,108 @@
       renderCurrentList();
     }
 
+    document.addEventListener('keydown', function(e) {
+      // Nếu đang ở khu vực học và nhấn Ctrl
+      if (document.getElementById('learningArea').style.display !== 'none') {
+        if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key === 'Control') {
+          // Phát lại từ vừa học
+          if (lastWord) speak(lastWord);
+        }
+        // Nếu muốn dùng Ctrl+R để phát lại từ vừa học (tránh reload trang)
+        if (e.ctrlKey && e.key.toLowerCase() === 'r') {
+          e.preventDefault();
+          if (lastWord) speak(lastWord);
+        }
+      }
+    });
+
+    function sessionResultFlash(msg, isCorrect) {
+      const el = document.getElementById('sessionResult');
+      el.textContent = msg;
+      el.style.color = isCorrect ? '#2563eb' : '#b91c1c';
+      setTimeout(() => {
+        el.textContent = `Correct: ${session ? session.correct : 0} • Wrong: ${session ? session.wrong : 0}`;
+        el.style.color = '';
+      }, 1200);
+    }
+
+    function applyFullLang(lang) {
+      const L = LANG_UI[lang];
+      // Sidebar
+      document.querySelector('.brand').textContent = lang === 'vi' ? 'Luyện từ vựng v5' : 'Vocab Trainer v5';
+      document.getElementById('newListName').placeholder = lang === 'vi' ? 'Tên danh sách mới' : 'New list name';
+      document.getElementById('createListBtn').textContent = lang === 'vi' ? 'Tạo' : 'Create';
+      document.getElementById('importBtn').textContent = lang === 'vi' ? 'Nhập JSON' : 'Import JSON';
+      document.getElementById('connectGithubBtn').textContent = lang === 'vi' ? '🔗 Kết nối GitHub' : '🔗 Connect GitHub';
+      document.getElementById('syncNowBtn').textContent = lang === 'vi' ? '💾 Đồng bộ' : '💾 Sync Now';
+      document.getElementById('footerTip').innerHTML = lang === 'vi'
+        ? 'Mẹo: Khi bật đồng bộ GitHub, dữ liệu nằm ở repo <code>data/vocab_data.json</code>.'
+        : 'Tip: With GitHub Sync enabled, data file lives in your repo at <code>data/vocab_data.json</code>.';
+
+      // Main controls
+      document.getElementById('exportBtn').textContent = lang === 'vi' ? 'Xuất JSON' : 'Export JSON';
+      document.getElementById('startLearningBtn').textContent = L.startLearningBtn;
+      document.getElementById('modeSelect').options[0].text = lang === 'vi' ? 'Nghe' : 'Listening';
+      document.getElementById('modeSelect').options[1].text = lang === 'vi' ? 'Viết' : 'Writing';
+      document.getElementById('modeSelect').options[2].text = lang === 'vi' ? 'Ôn tập đã học' : 'Review Learned';
+      document.getElementById('modeSelect').options[3].text = lang === 'vi' ? 'Hỗn hợp' : 'Mixed';
+      document.getElementById('excludeDisabled').nextSibling.textContent = lang === 'vi' ? 'Bỏ qua từ tắt' : 'Exclude disabled';
+      document.getElementById('randomize').nextSibling.textContent = lang === 'vi' ? 'Ngẫu nhiên' : 'Randomize';
+
+      // Add/Edit
+      document.getElementById('wordInput').placeholder = lang === 'vi' ? 'Từ tiếng Anh' : 'English word';
+      document.getElementById('meaningInput').placeholder = lang === 'vi' ? 'Nghĩa tiếng Việt — để trống để tự dịch' : 'Meaning (Vietnamese) — leave empty to auto-translate';
+      document.getElementById('addWordBtn').textContent = lang === 'vi' ? 'Thêm' : 'Add';
+      document.getElementById('updateWordBtn').textContent = lang === 'vi' ? 'Cập nhật' : 'Update';
+      document.getElementById('resetAllProgressBtn').textContent = lang === 'vi' ? 'Đặt lại tiến độ' : 'Reset all progress';
+      document.getElementById('lblOptions').textContent = L.lblOptions;
+      document.getElementById('copyExportBtn').textContent = lang === 'vi' ? 'Sao chép' : 'Copy';
+      document.getElementById('applyImportBtn').textContent = lang === 'vi' ? 'Áp dụng nhập' : 'Apply Import';
+      document.getElementById('exportArea').placeholder = lang === 'vi' ? 'JSON xuất hiện ở đây' : 'Exported JSON appears here';
+
+      // Table headers
+      document.getElementById('thWord').textContent = lang === 'vi' ? 'Từ' : 'Word';
+      document.getElementById('thMeaning').textContent = lang === 'vi' ? 'Nghĩa (VI)' : 'Meaning (VI)';
+      document.getElementById('thStreak').textContent = lang === 'vi' ? 'Chuỗi đúng' : 'Streak';
+      document.getElementById('thLearned').textContent = lang === 'vi' ? 'Đã học' : 'Learned';
+      document.getElementById('thEnabled').textContent = lang === 'vi' ? 'Bật' : 'Enabled';
+
+      // Learning area
+      document.getElementById('lblLearningSession').textContent = L.lblLearningSession;
+      document.getElementById('stopSessionBtn').textContent = lang === 'vi' ? 'Dừng lại' : 'Stop';
+      document.getElementById('playWordBtn').textContent = lang === 'vi' ? '🔊 Phát' : '🔊 Play';
+      document.getElementById('markCorrectBtn').textContent = lang === 'vi' ? 'Đúng' : 'Mark Correct';
+      document.getElementById('markWrongBtn').textContent = lang === 'vi' ? 'Sai' : 'Mark Wrong';
+      document.getElementById('studyAnswer').placeholder = lang === 'vi' ? 'Gõ từ bạn nghe và nhấn Enter' : 'Type the word you hear and press Enter';
+
+      // Wrong words modal
+      document.querySelector('#wrongWordsModal h3').textContent = lang === 'vi' ? 'Các từ bạn sai' : 'Words you got wrong';
+      document.getElementById('closeWrongWordsBtn').textContent = lang === 'vi' ? 'Đóng' : 'Close';
+      document.getElementById('retryWrongWordsBtn').textContent = lang === 'vi' ? 'Học lại từ sai' : 'Retry Wrong Words';
+
+      // GitHub modal
+      document.querySelector('#githubModal h3').textContent = lang === 'vi' ? 'Kết nối với GitHub' : 'Connect to GitHub';
+      document.querySelector('#githubModal .muted-note').innerHTML = lang === 'vi'
+        ? 'Chúng tôi sẽ đọc/ghi <code>data/vocab_data.json</code> trong repo của bạn. Cung cấp token cá nhân có quyền <code>contents: write</code>.'
+        : "We'll read/write <code>data/vocab_data.json</code> in your repo. Provide a personal access token with <code>contents: write</code> permission.";
+      document.querySelector('#githubModal label:nth-of-type(1)').textContent = lang === 'vi' ? 'Tên người dùng GitHub' : 'GitHub username';
+      document.querySelector('#githubModal label:nth-of-type(2)').textContent = lang === 'vi' ? 'Tên repository' : 'Repository name';
+      document.querySelector('#githubModal label:nth-of-type(3)').textContent = lang === 'vi' ? 'Nhánh' : 'Branch';
+      document.querySelector('#githubModal label:nth-of-type(4)').textContent = lang === 'vi' ? 'Token truy cập cá nhân (PAT)' : 'Personal Access Token (PAT)';
+      document.getElementById('ghCancel').textContent = lang === 'vi' ? 'Hủy' : 'Cancel';
+      document.getElementById('ghSave').textContent = lang === 'vi' ? 'Lưu & Kết nối' : 'Save & Connect';
+    }
+
+    // Gọi hàm này khi đổi ngôn ngữ
+    document.getElementById('uiLang').addEventListener('change', e => {
+      const lang = e.target.value;
+      localStorage.setItem(LANG_KEY, lang);
+      applyLang(lang);
+      applyFullLang(lang); // Thêm dòng này
+    });
+
+    // Khi khởi tạo cũng gọi
+    applyFullLang(savedLang);
   </script>
 </body>
 
