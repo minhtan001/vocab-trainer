@@ -175,13 +175,79 @@
 
     @media(max-width:900px) {
       .app {
-        flex-direction: column
+        flex-direction: column;
+        min-height: 100vh;
       }
-
       .sidebar {
         width: 100%;
+        height: auto;
         border-right: none;
-        border-bottom: 1px solid #e6eef9
+        border-bottom: 1px solid #e6eef9;
+        padding: 12px;
+        position: static;
+      }
+      main {
+        padding: 10px;
+      }
+      .card {
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+      .word-table {
+        max-height: 300px;
+        font-size: 15px;
+      }
+      .modal-card {
+        width: 98vw;
+        max-width: 98vw;
+        padding: 10px;
+      }
+      .lists {
+        flex-direction: column;
+        gap: 6px;
+      }
+      .controls {
+        flex-direction: column;
+        gap: 6px;
+      }
+      .learn-controls {
+        flex-direction: column;
+        gap: 6px;
+      }
+      .right {
+        margin-left: 0;
+        margin-top: 8px;
+      }
+      input[type=text],
+      textarea,
+      select {
+        font-size: 16px;
+        padding: 10px;
+      }
+      button.btn,
+      button.btn.alt {
+        width: 100%;
+        margin-bottom: 6px;
+        font-size: 16px;
+        padding: 10px 0;
+      }
+    }
+
+    /* Thêm cho màn hình rất nhỏ */
+    @media (max-width: 600px) {
+      .modal-card {
+        width: 100vw;
+        max-width: 100vw;
+        padding: 6px;
+      }
+      .card {
+        padding: 6px;
+      }
+      .word-table {
+        font-size: 13px;
+      }
+      h2, h3 {
+        font-size: 18px;
       }
     }
 
@@ -260,6 +326,15 @@
       height: 16px;
       vertical-align: middle;
       margin-right: 4px;
+    }
+
+    /* Sửa layout Add/Edit khi màn hình nhỏ */
+    @media (max-width: 900px) {
+      #manageArea > div[style*="display:grid"] {
+        display: block !important;
+        grid-template-columns: none !important;
+        gap: 0 !important;
+      }
     }
   </style>
 </head>
@@ -407,7 +482,7 @@
               <div style="font-size:22px;font-weight:600" id="studyWord">—</div>
               <div class="small" id="studyMeaning" style="margin-top:6px; color:var(--muted)"></div>
               <div style="height:8px"></div>
-              <input id="studyAnswer" placeholder="Type the word you hear and press Enter" />
+              <input id="studyAnswer" autocomplete="off" placeholder="Type the word you hear and press Enter" />
             </div>
 
             <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
@@ -761,7 +836,9 @@
       } else {
         session.wrong++;
         actual.correctStreak = 0;
-        wrongWords.push(cw); // Lưu từ sai
+        // Lưu lại đáp án người dùng
+        cw.userInput = document.getElementById('studyAnswer').value.trim();
+        wrongWords.push(cw);
         sessionResultFlash(`Wrong — answer: ${actual.word}`, false);
       }
       saveDataLocal();
@@ -771,7 +848,7 @@
         updateSessionUI();
         setTimeout(() => { speakCurrent(); document.getElementById('studyAnswer').focus(); }, 800);
       } else {
-        showWrongWordsModal(); // Hiện modal khi kết thúc
+        showWrongWordsModal();
       }
     }
 
@@ -782,7 +859,13 @@
       }
       const modal = document.getElementById('wrongWordsModal');
       const listDiv = document.getElementById('wrongWordsList');
-      listDiv.innerHTML = '<ul>' + wrongWords.map(w => `<li><strong>${escapeHtml(w.word)}</strong> — ${escapeHtml(w.meaning)}</li>`).join('') + '</ul>';
+      // Hiển thị từ sai và đáp án đã gõ (giả sử wrongWords lưu thêm thuộc tính userInput)
+      listDiv.innerHTML = '<ul>' + wrongWords.map(w =>
+        `<li>
+      <strong>${escapeHtml(w.word)}</strong> — ${escapeHtml(w.meaning)}
+      <span style="color:#b91c1c; margin-left:10px">Bạn đã gõ: ${escapeHtml(w.userInput || '')}</span>
+    </li>`
+      ).join('') + '</ul>';
       modal.classList.remove('hidden');
     }
 
@@ -816,7 +899,21 @@
     let voices = [];
     function loadVoices() { voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('en') || v.lang.startsWith('en-')); if (!voices.length) voices = speechSynthesis.getVoices(); }
     loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices;
-    function speak(text) { if (!('speechSynthesis' in window)) { alert('SpeechSynthesis not supported'); return; } const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; if (voices && voices.length) u.voice = voices[0]; u.rate = 0.95; speechSynthesis.cancel(); speechSynthesis.speak(u); }
+    function speak(text) {
+  if (!('speechSynthesis' in window)) { alert('SpeechSynthesis not supported'); return; }
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-US';
+  // Ưu tiên giọng Google US English hoặc Natural nếu có
+  let bestVoice = voices.find(v => v.name === 'Google US English')
+    || voices.find(v => /natural|premium/i.test(v.name))
+    || voices.find(v => v.lang === 'en-US')
+    || voices[0];
+  if (bestVoice) u.voice = bestVoice;
+  u.rate = 1;    // tốc độ bình thường
+  u.pitch = 1.1; // cao độ hơi cao cho tự nhiên
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
 
     // utils
     function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } }
