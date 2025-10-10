@@ -8,7 +8,7 @@
           "id": "w_8ke4rp0",
           "word": "apple",
           "meaning": "táo",
-          "correctStreak": 1,
+          "correctStreak": 2,
           "learned": false,
           "enabled": true
         },
@@ -16,7 +16,7 @@
           "id": "w_ld7ui4y",
           "word": "banana",
           "meaning": "chuối",
-          "correctStreak": 0,
+          "correctStreak": 1,
           "learned": false,
           "enabled": true
         },
@@ -24,7 +24,7 @@
           "id": "w_hawka2m",
           "word": "orange",
           "meaning": "cam",
-          "correctStreak": 0,
+          "correctStreak": 1,
           "learned": false,
           "enabled": true
         },
@@ -32,7 +32,7 @@
           "id": "w_9xtysbr",
           "word": "book",
           "meaning": "sách",
-          "correctStreak": 1,
+          "correctStreak": 2,
           "learned": false,
           "enabled": true
         },
@@ -40,7 +40,7 @@
           "id": "w_6yw9y9z",
           "word": "table",
           "meaning": "bàn",
-          "correctStreak": 0,
+          "correctStreak": 1,
           "learned": false,
           "enabled": true
         },
@@ -93,7 +93,7 @@
         {
           "id": "w_y10crs5",
           "word": "kindergarten",
-          "meaning": "Kindergarten ",
+          "meaning": "trường mẫu giáo",
           "correctStreak": 0,
           "learned": false,
           "enabled": true
@@ -117,7 +117,7 @@
         {
           "id": "w_japer2s",
           "word": "recess",
-          "meaning": "phần mở rộng ở cuối ống",
+          "meaning": "ra chơi",
           "correctStreak": 0,
           "learned": false,
           "enabled": true
@@ -141,7 +141,7 @@
         {
           "id": "w_f6b6p2k",
           "word": "neighbor",
-          "meaning": "hàng xóm lân cận",
+          "meaning": "hàng xóm",
           "correctStreak": 0,
           "learned": false,
           "enabled": true
@@ -165,7 +165,7 @@
         {
           "id": "w_acwr1ab",
           "word": "insects",
-          "meaning": "- Tôi nhận được một tin nhắn.",
+          "meaning": "côn trùng",
           "correctStreak": 0,
           "learned": false,
           "enabled": true
@@ -181,7 +181,7 @@
         {
           "id": "w_1hjnelu",
           "word": "dining",
-          "meaning": "ăn uống",
+          "meaning": "bữa tối",
           "correctStreak": 0,
           "learned": false,
           "enabled": true
@@ -253,7 +253,7 @@
         {
           "id": "w_lyr5pwv",
           "word": "roasted",
-          "meaning": "quay",
+          "meaning": "nướng",
           "correctStreak": 0,
           "learned": false,
           "enabled": true
@@ -333,7 +333,7 @@
         {
           "id": "w_cxsfvdy",
           "word": "basement",
-          "meaning": "móng cơ bản",
+          "meaning": "tầng hầm",
           "correctStreak": 0,
           "learned": false,
           "enabled": true
@@ -341,7 +341,7 @@
         {
           "id": "w_l2grquy",
           "word": "furniture",
-          "meaning": "đồ đạc",
+          "meaning": "nội thất",
           "correctStreak": 0,
           "learned": false,
           "enabled": true
@@ -357,7 +357,7 @@
         {
           "id": "w_3a2h2pg",
           "word": "maple",
-          "meaning": "Phong",
+          "meaning": "cây Phong",
           "correctStreak": 0,
           "learned": false,
           "enabled": true
@@ -421,7 +421,7 @@
         {
           "id": "w_56e255w",
           "word": "weights",
-          "meaning": "tạ",
+          "meaning": "cân nặng",
           "correctStreak": 0,
           "learned": false,
           "enabled": true
@@ -461,7 +461,7 @@
         {
           "id": "w_ewjsnz2",
           "word": "practices",
-          "meaning": "hoạt động tốt ",
+          "meaning": "thực hành",
           "correctStreak": 0,
           "learned": false,
           "enabled": true
@@ -509,7 +509,7 @@
         {
           "id": "w_3ixin8l",
           "word": "education",
-          "meaning": "giáo dục, rèn luyện",
+          "meaning": "giáo dục",
           "correctStreak": 0,
           "learned": false,
           "enabled": true
