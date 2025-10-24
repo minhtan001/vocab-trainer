@@ -152,7 +152,8 @@
           "meaning": "tím",
           "correctStreak": 0,
           "learned": false,
-          "enabled": true
+          "enabled": true,
+          "userInput": "purpul"
         },
         {
           "id": "w_a13hqq4",
